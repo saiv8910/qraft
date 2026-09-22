@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Qraft — Free QR Code Generator (No Signup, No Watermark)</title>
+<meta name="description" content="Qraft is a free QR code generator for links, Wi-Fi networks, contact cards and email. Custom colors, center logo, PNG & SVG export. Runs 100% in your browser — nothing is uploaded." />
+<meta name="theme-color" content="#0f172a" />
+<meta property="og:title" content="Qraft — Free QR Code Generator" />
+<meta name="twitter:card" content="summary" />
+<meta property="og:description" content="Make QR codes for links, Wi-Fi, contacts and email. Custom colors, logo, PNG & SVG. No signup, no watermark." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjI0IiBmaWxsPSIjMGYxNzJhIi8+PGNpcmNsZSBjeD0iNDUiIGN5PSI0NSIgcj0iMjEiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzM4YmRmOCIgc3Ryb2tlLXdpZHRoPSIxMSIvPjxsaW5lIHgxPSI1OCIgeTE9IjU4IiB4Mj0iNzMiIHkyPSI3MyIgc3Ryb2tlPSIjMzhiZGY4IiBzdHJva2Utd2lkdGg9IjExIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cmVjdCB4PSI3MiIgeT0iMTUiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxMyIgcng9IjMiIGZpbGw9IiMyMmM1NWUiLz48L3N2Zz4=" />
+<!-- Bundled locally — no CDN dependency, works offline.
+     Kazuhiko Arase's qrcode-generator (MIT): picks the QR version by measuring
+     the real bit buffer instead of guessing, so multi-byte text never overflows. -->
+<script src="qrcode.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #273549;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-2: #22c55e;
+    --border: #334155;
+    --danger: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 20% -10%, #1e3a5f 0%, var(--bg) 55%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .app {
+    width: 100%;
+    max-width: 980px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+  }
+  .pane { padding: 30px; }
+  .left { border-right: 1px solid var(--border); }
+  .right { position: sticky; top: 0; align-self: start; }
+  h1 { font-size: 23px; letter-spacing: -.5px; display: flex; align-items: center; gap: 9px; }
+  .wordmark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), #2563eb);
+    color: #06283d; font-size: 18px; font-weight: 900;
+    box-shadow: 0 4px 14px rgba(56,189,248,.35);
+  }
+  .sub { color: var(--muted); font-size: 13.5px; margin-top: 6px; line-height: 1.5; }
+  .badge { display:inline-block; font-size:11px; color:var(--accent-2); border:1px solid rgba(34,197,94,.35); background:rgba(34,197,94,.1); padding:2px 8px; border-radius:999px; margin-top:10px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 15px 0 6px; font-weight: 600; }
+  textarea, select, input[type="text"], input[type="password"], input[type="email"], input[type="tel"], input[type="url"] {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 11px 13px;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  textarea { resize: vertical; min-height: 84px; }
+  textarea:focus, select:focus, input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(56,189,248,.18);
+  }
+  input::placeholder, textarea::placeholder { color: #64748b; }
+  .hint { font-size: 12px; color: #64748b; margin-top: 6px; }
+  .count { font-size: 11px; color: #64748b; text-align: right; margin-top: 4px; }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; min-width: 0; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; color: var(--muted); cursor: pointer; }
+  .check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 7px; margin: 20px 0 4px; }
+  .tab {
+    font-size: 13px; font-weight: 700; padding: 8px 13px; border-radius: 9px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; transition: .15s;
+  }
+  .tab:hover { color: var(--text); border-color: var(--accent); }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #06283d; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .section-title { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #64748b; margin: 24px 0 4px; font-weight: 700; }
+  .colors { display: flex; gap: 16px; align-items: center; margin-top: 6px; }
+  .color-wrap { display: flex; align-items: center; gap: 8px; }
+  input[type="color"] {
+    width: 42px; height: 38px; border: 1px solid var(--border);
+    background: var(--panel-2); border-radius: 8px; padding: 3px; cursor: pointer;
+  }
+  .swaps { display: flex; gap: 7px; margin-top: 11px; flex-wrap: wrap; }
+  .chip {
+    font-size: 12px; padding: 6px 11px; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; transition: .15s;
+  }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+
+  .logo-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .logo-thumb { width: 44px; height: 44px; border-radius: 8px; background: #fff; object-fit: contain; border: 1px solid var(--border); }
+  .mini {
+    font-size: 12px; padding: 8px 12px; border-radius: 8px; font-weight: 700;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text); cursor: pointer; transition: .15s;
+  }
+  .mini:hover { border-color: var(--accent); }
+  .mini.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  .recent { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+  .recent:empty::after { content: "Nothing yet — your last codes show up here"; font-size: 12px; color: #475569; }
+
+  .right { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; }
+  .canvas-box {
+    background: #fff;
+    padding: 15px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    line-height: 0;
+    transition: transform .2s;
+    min-width: 130px;
+    min-height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .canvas-box:hover { transform: scale(1.03); }
+  #preview { border-radius: 6px; display: block; max-width: 100%; height: auto; }
+  .placeholder { color: #64748b; font-size: 13.5px; line-height: 1.55; max-width: 175px; }
+  .actions { display: flex; gap: 9px; margin-top: 20px; width: 100%; flex-wrap: wrap; }
+  button { font-family: inherit; }
+  .btn {
+    flex: 1 1 auto;
+    border: none; border-radius: 10px; padding: 11px 13px;
+    font-size: 13.5px; font-weight: 700; cursor: pointer; transition: transform .1s, filter .15s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .primary { background: var(--accent); color: #06283d; }
+  .primary:hover { filter: brightness(1.08); }
+  .ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .ghost:hover { border-color: var(--accent); }
+  .status { font-size: 12px; color: var(--accent-2); margin-top: 12px; min-height: 16px; line-height: 1.5; word-break: break-word; }
+  .err { color: var(--danger); }
+  .tip { font-size: 11.5px; color: #64748b; margin-top: 6px; line-height: 1.5; }
+
+  .bulk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; width: 100%; margin-top: 4px; }
+  .bulk-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; text-align: center; }
+  .bulk-card canvas { width: 100%; height: auto; border-radius: 6px; background: #fff; }
+  .bulk-label { font-size: 11px; color: var(--muted); margin: 8px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bulk-card .mini { width: 100%; }
+
+  body.bulk-mode .app { grid-template-columns: 1fr; }
+  body.bulk-mode .left { border-right: none; border-bottom: 1px solid var(--border); }
+  body.bulk-mode .right { position: static; }
+
+  #source { position: absolute; left: -9999px; top: 0; width: 1px; height: 1px; overflow: hidden; }
+
+  @media (max-width: 720px) {
+    body { padding: 0; align-items: flex-start; }
+    .app { grid-template-columns: 1fr; border-radius: 0; border: none; min-height: 100vh; }
+    .left { border-right: none; border-bottom: 1px solid var(--border); }
+    .right { position: static; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="pane left">
+    <h1><span class="wordmark" aria-hidden="true">Q</span> Qraft</h1>
+    <p class="sub">Free QR codes for links, Wi-Fi, contact cards &amp; email — with your own colors and logo.</p>
+    <span class="badge">✓ Runs 100% in your browser — nothing is uploaded</span>
+
+    <div class="tabs" role="tablist" aria-label="QR code type">
+      <button class="tab" role="tab" data-tab="link" aria-selected="true">🔗 Link / Text</button>
+      <button class="tab" role="tab" data-tab="wifi" aria-selected="false">📶 Wi-Fi</button>
+      <button class="tab" role="tab" data-tab="vcard" aria-selected="false">📇 Contact</button>
+      <button class="tab" role="tab" data-tab="email" aria-selected="false">✉️ Email</button>
+      <button class="tab" role="tab" data-tab="bulk" aria-selected="false">📦 Bulk</button>
+    </div>
+
+    <!-- LINK / TEXT -->
+    <div class="panel active" data-panel="link">
+      <label for="text">Text or URL</label>
+      <textarea id="text" placeholder="https://example.com" spellcheck="false"></textarea>
+      <div class="count" id="count">0 characters</div>
+      <div class="swaps" style="margin-top:8px">
+        <button class="chip" data-sample="https://example.com">example.com</button>
+        <button class="chip" data-sample="https://github.com">github.com</button>
+        <button class="chip" data-sample="Hello, world!">Hello, world!</button>
+        <button class="chip" data-sample="">Clear</button>
+      </div>
+    </div>
+
+    <!-- WI-FI -->
+    <div class="panel" data-panel="wifi">
+      <label for="ssid">Network name (SSID)</label>
+      <input type="text" id="ssid" placeholder="MyHomeWiFi" autocomplete="off" />
+      <label for="wpass">Password</label>
+      <input type="text" id="wpass" placeholder="hunter2" autocomplete="off" />
+      <div class="row">
+        <div>
+          <label for="enc">Security</label>
+          <select id="enc">
+            <option value="WPA" selected>WPA / WPA2 / WPA3</option>
+            <option value="WEP">WEP</option>
+            <option value="nopass">Open (no password)</option>
+          </select>
+        </div>
+        <div style="flex:0 0 auto">
+          <label>&nbsp;</label>
+          <label class="check" style="margin-top:11px"><input type="checkbox" id="whidden" /> Hidden network</label>
+        </div>
+      </div>
+      <p class="hint">Scanning this joins the network automatically — great for shops, offices &amp; guests.</p>
+    </div>
+
+    <!-- VCARD -->
+    <div class="panel" data-panel="vcard">
+      <div class="row">
+        <div>
+          <label for="vname">Full name *</label>
+          <input type="text" id="vname" placeholder="Ada Lovelace" autocomplete="off" />
+        </div>
+        <div>
+          <label for="vorg">Company</label>
+          <input type="text" id="vorg" placeholder="Analytical Engines Ltd" autocomplete="off" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="vphone">Phone</label>
+          <input type="tel" id="vphone" placeholder="+1 555 0100" autocomplete="off" />
+        </div>
+        <div>
+          <label for="vemail">Email</label>
+          <input type="email" id="vemail" placeholder="ada@example.com" autocomplete="off" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="vweb">Website</label>
+          <input type="url" id="vweb" placeholder="https://example.com" autocomplete="off" />
+        </div>
+        <div>
+          <label for="vtitle">Job title</label>
+          <input type="text" id="vtitle" placeholder="Mathematician" autocomplete="off" />
+        </div>
+      </div>
+      <p class="hint">Scanning saves you straight to the phone's contacts. Name is required.</p>
+    </div>
+
+    <!-- EMAIL -->
+    <div class="panel" data-panel="email">
+      <label for="eto">To</label>
+      <input type="email" id="eto" placeholder="team@example.com" autocomplete="off" />
+      <label for="esub">Subject</label>
+      <input type="text" id="esub" placeholder="Hello!" autocomplete="off" />
+      <label for="ebody">Message</label>
+      <textarea id="ebody" placeholder="Hi, I'd like to know more about…"></textarea>
+      <p class="hint">Opens the visitor's mail app with everything pre-filled.</p>
+    </div>
+
+    <!-- BULK -->
+    <div class="panel" data-panel="bulk">
+      <label for="bulktext">Paste one item per line</label>
+      <textarea id="bulktext" style="min-height:150px" placeholder="https://example.com/1&#10;https://example.com/2&#10;https://example.com/3" spellcheck="false"></textarea>
+      <div class="count" id="bulkcount">0 lines</div>
+      <p class="hint">Up to 60 codes at once (duplicates removed). Uses your size, color &amp; logo settings below.</p>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="section-title">Style</div>
+    <div class="row">
+      <div>
+        <label for="size">Size (px)</label>
+        <select id="size">
+          <option value="180">180 × 180</option>
+          <option value="256" selected>256 × 256</option>
+          <option value="400">400 × 400</option>
+          <option value="600">600 × 600</option>
+          <option value="1000">1000 × 1000</option>
+        </select>
+      </div>
+      <div>
+        <label for="ecc">Error correction</label>
+        <select id="ecc">
+          <option value="L">Low (7%)</option>
+          <option value="M" selected>Medium (15%)</option>
+          <option value="Q">Quartile (25%)</option>
+          <option value="H">High (30%) — best for logos</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Colors</label>
+    <div class="colors">
+      <div class="color-wrap">
+        <input type="color" id="dark" value="#000000" />
+        <span style="font-size:13px;color:var(--muted)">Dark</span>
+      </div>
+      <div class="color-wrap">
+        <input type="color" id="light" value="#ffffff" />
+        <span style="font-size:13px;color:var(--muted)">Light</span>
+      </div>
+    </div>
+    <div class="swaps">
+      <button class="chip" data-pair="#000000|#ffffff">Classic</button>
+      <button class="chip" data-pair="#1e293b|#f8fafc">Slate</button>
+      <button class="chip" data-pair="#0f766e|#ecfdf5">Teal</button>
+      <button class="chip" data-pair="#7c3aed|#f5f3ff">Purple</button>
+      <button class="chip" data-pair="#be123c|#fff1f2">Rose</button>
+      <button class="chip" data-pair="#ffffff|#0f172a">Inverted</button>
+    </div>
+
+    <label>Center logo (optional)</label>
+    <div class="logo-row">
+      <button class="mini" id="logobtn">📁 Choose image</button>
+      <button class="mini danger" id="logorem" style="display:none">✕ Remove</button>
+      <img class="logo-thumb" id="logothumb" style="display:none" alt="logo preview" />
+      <input type="file" id="logo" accept="image/*" hidden />
+    </div>
+    <div class="hint" id="logohint">Adds your logo in the middle. Error correction switches to High automatically so it still scans.</div>
+
+    <div class="section-title">Recent</div>
+    <div class="recent" id="recent"></div>
+  </div>
+
+  <div class="pane right">
+    <div id="singleview" style="width:100%;display:flex;flex-direction:column;align-items:center">
+      <div class="canvas-box" id="box">
+        <div class="placeholder" id="placeholder">Your QR code will appear here ✨<br /><br />Start typing on the left.</div>
+        <canvas id="preview" style="display:none"></canvas>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="download">⬇ PNG</button>
+        <button class="btn ghost" id="svgbtn">SVG</button>
+        <button class="btn ghost" id="copy">📋 Copy</button>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="share">🔗 Share link</button>
+        <button class="btn ghost" id="clear">↺ Clear</button>
+      </div>
+      <div class="status" id="status"></div>
+      <p class="tip">Tip: scan with your phone camera before printing. Higher error correction survives smudges &amp; logos.</p>
+    </div>
+
+    <div id="bulkview" style="width:100%;display:none;text-align:left">
+      <div class="actions" style="margin-top:0">
+        <button class="btn primary" id="dlall">⬇ Download all PNG</button>
+        <button class="btn ghost" id="bulkclear">↺ Clear</button>
+      </div>
+      <div class="status" id="bulkstatus" style="text-align:center"></div>
+      <div class="bulk-grid" id="grid"></div>
+      <p class="tip" style="text-align:center">Your browser may ask permission to download multiple files — choose <b>Allow</b>.</p>
+    </div>
+  </div>
+</div>
+
+<div id="source" aria-hidden="true"></div>
+
+<script>
+// ==APP-START==
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    text: $('text'), ssid: $('ssid'), wpass: $('wpass'), enc: $('enc'), whidden: $('whidden'),
+    vname: $('vname'), vorg: $('vorg'), vphone: $('vphone'), vemail: $('vemail'), vweb: $('vweb'), vtitle: $('vtitle'),
+    eto: $('eto'), esub: $('esub'), ebody: $('ebody'),
+    bulktext: $('bulktext'), bulkcount: $('bulkcount'), count: $('count'),
+    size: $('size'), ecc: $('ecc'), dark: $('dark'), light: $('light'),
+    preview: $('preview'), placeholder: $('placeholder'), box: $('box'),
+    source: $('source'), status: $('status'), grid: $('grid'),
+    singleview: $('singleview'), bulkview: $('bulkview'),
+    bulkstatus: $('bulkstatus'), recent: $('recent'),
+    logo: $('logo'), logothumb: $('logothumb'), logorem: $('logorem'), logobtn: $('logobtn')
+  };
+
+  var MAX_BULK = 60;
+  var HISTORY_KEY = 'qr-gen-history-v1';
+  var SHARE_KEY = 'qr-gen-v1';
+
+  var currentTab = 'link';
+  var lastQr = null;
+  var logoData = null;   // base64 data URL
+  var logoImg = null;    // decoded Image
+  var bulkItems = [];
+  var renderTimer = null;
+  var historyTimer = null;
+  var busy = false;
+
+  /* ---------- tiny helpers ---------- */
+  function setStatus(el, msg, isErr) {
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = (el === els.status ? 'status' : 'status') + (isErr ? ' err' : '');
+  }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function tick() { return new Promise(function (r) { setTimeout(r, 0); }); }
+  // QR max capacity in bytes (8-bit mode, version 40) per error-correction level
+  var MAX_BYTES = { L: 2953, M: 2331, Q: 1663, H: 1273 };
+
+  function byteLength(str) {
+    try { return new TextEncoder().encode(str).length; }
+    catch (e) { return String(str).length; }
+  }
+
+  function friendlyErr(e) {
+    var m = String((e && e.message) || e);
+    // The library throws an opaque TypeError when data exceeds capacity,
+    // so match that too and translate it into something a human can act on.
+    if (/too long|overflow|reading '\d+'|of undefined/i.test(m)) {
+      return 'Text too long — lower Error correction or shorten it';
+    }
+    if (/circular|clone/i.test(m)) return 'That image could not be read — try a PNG or JPG';
+    return m;
+  }
+
+  // Guard before calling the library so users never see a raw TypeError
+  function assertFits(text) {
+    var lvl = MAX_BYTES[els.ecc.value] ? els.ecc.value : 'M';
+    if (byteLength(text) > MAX_BYTES[lvl]) {
+      var err = new Error('Too long data');
+      throw err;
+    }
+  }
+  function safeGet(key, fallback) {
+    try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch (e) { return fallback; }
+  }
+  function safeSet(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+    catch (e) { return false; }
+  }
+  function b64enc(str) {
+    var bytes = new TextEncoder().encode(str), out = '', i;
+    for (i = 0; i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
+    return btoa(out).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64dec(str) {
+    var s = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), bytes = new Uint8Array(bin.length), i;
+    for (i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function truncate(s, n) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+  /* ---------- escaping ---------- */
+  function escVCard(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); }
+  function escWifi(s) { return String(s || '').replace(/([\\;,:"])/g, '\\$1'); }
+
+  /* ---------- payload builders ---------- */
+  function buildPayload(tab) {
+    try {
+      if (tab === 'link') return els.text.value;
+      if (tab === 'bulk') return els.bulktext.value;
+
+      if (tab === 'wifi') {
+        var ssid = els.ssid.value.trim();
+        if (!ssid) return '';
+        var hidden = els.whidden.checked ? 'H:true;' : '';
+        if (els.enc.value === 'nopass') return 'WIFI:T:nopass;S:' + escWifi(ssid) + ';' + hidden + ';';
+        return 'WIFI:T:' + els.enc.value + ';S:' + escWifi(ssid) + ';P:' + escWifi(els.wpass.value) + ';' + hidden + ';';
+      }
+
+      if (tab === 'vcard') {
+        var name = els.vname.value.trim();
+        if (!name) return '';
+        var lines = ['BEGIN:VCARD', 'VERSION:3.0', 'N:' + escVCard(name), 'FN:' + escVCard(name)];
+        if (els.vorg.value.trim()) lines.push('ORG:' + escVCard(els.vorg.value.trim()));
+        if (els.vtitle.value.trim()) lines.push('TITLE:' + escVCard(els.vtitle.value.trim()));
+        if (els.vphone.value.trim()) lines.push('TEL;TYPE=CELL:' + els.vphone.value.trim());
+        if (els.vemail.value.trim()) lines.push('EMAIL;TYPE=INTERNET:' + els.vemail.value.trim());
+        if (els.vweb.value.trim()) lines.push('URL:' + els.vweb.value.trim());
+        lines.push('END:VCARD');
+        return lines.join('\n');
+      }
+
+      if (tab === 'email') {
+        var to = els.eto.value.trim();
+        if (!to) return '';
+        var q = [];
+        if (els.esub.value.trim()) q.push('subject=' + encodeURIComponent(els.esub.value));
+        if (els.ebody.value.trim()) q.push('body=' + encodeURIComponent(els.ebody.value));
+        return 'mailto:' + to + (q.length ? '?' + q.join('&') : '');
+      }
+    } catch (e) {
+      setStatus(els.status, '⚠️ ' + friendlyErr(e), true);
+    }
+    return '';
+  }
+
+  /* ---------- QR core ---------- */
+  // Build a QR model (no DOM). typeNumber 0 = auto-pick by real capacity.
+  function buildQR(text) {
+    assertFits(text);
+    var level = (['L', 'M', 'Q', 'H'].indexOf(els.ecc.value) >= 0) ? els.ecc.value : 'M';
+    var qr = qrcode(0, level);
+    qr.addData(text);
+    qr.make();
+    var n = qr.getModuleCount();
+    if (!n) throw new Error('Could not build that QR code');
+    lastQr = qr;
+    return qr;
+  }
+
+  // Draw modules onto a canvas at an exact pixel size (4-module quiet zone).
+  function paintQR(qr, cv, size) {
+    var ctx = cv.getContext('2d');
+    if (!ctx) throw new Error('Canvas is not supported in this browser');
+    var n = qr.getModuleCount();
+    var margin = 4;
+    var total = n + margin * 2;
+
+    cv.width = size;
+    cv.height = size;
+    ctx.fillStyle = els.light.value;
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = els.dark.value;
+
+    // Round each module's edges so there are no seams between cells
+    for (var r = 0; r < n; r++) {
+      var y0 = Math.round((r + margin) * size / total);
+      var y1 = Math.round((r + margin + 1) * size / total);
+      for (var c = 0; c < n; c++) {
+        if (!qr.isDark(r, c)) continue;
+        var x0 = Math.round((c + margin) * size / total);
+        var x1 = Math.round((c + margin + 1) * size / total);
+        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      }
+    }
+    return ctx;
+  }
+
+  function drawLogo(ctx, size) {
+    if (!logoImg) return;
+    var box = Math.round(size * 0.22);
+    var pad = Math.max(4, Math.round(size * 0.018));
+    var x = (size - box) / 2, y = (size - box) / 2;
+    var plate = box + pad * 2;
+
+    ctx.save();
+    ctx.fillStyle = els.light.value;
+    try {
+      if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x - pad, y - pad, plate, plate, Math.max(4, Math.round(size * 0.035)));
+        ctx.fill();
+      } else {
+        ctx.fillRect(x - pad, y - pad, plate, plate);
+      }
+    } catch (e) { ctx.fillRect(x - pad, y - pad, plate, plate); }
+
+    var iw = logoImg.naturalWidth || logoImg.width || 1;
+    var ih = logoImg.naturalHeight || logoImg.height || 1;
+    var scale = Math.min(box / iw, box / ih);
+    var w = iw * scale, h = ih * scale;
+    try { ctx.drawImage(logoImg, x + (box - w) / 2, y + (box - h) / 2, w, h); }
+    catch (e) { /* tainted/undecodable image — QR still shows */ }
+    ctx.restore();
+  }
+
+  function paintPreview(qr, size) {
+    var cv = els.preview;
+    var ctx = paintQR(qr, cv, size);
+    drawLogo(ctx, size);
+    els.box.style.background = els.light.value;
+    els.placeholder.style.display = 'none';
+    cv.style.display = 'block';
+  }
+
+  function clearPreview() {
+    lastQr = null;
+    els.preview.style.display = 'none';
+    els.preview.width = 0;
+    els.preview.height = 0;
+    els.placeholder.style.display = 'block';
+    els.box.style.background = '#fff';
+  }
+
+  function render() {
+    if (currentTab === 'bulk') { renderBulk(); return; }
+
+    var payload = buildPayload(currentTab);
+    updateCount();
+
+    if (!payload.trim()) {
+      clearPreview();
+      setStatus(els.status, currentTab === 'link' ? '' : emptyHint(currentTab));
+      if (currentTab !== 'link') els.status.className = 'status';
+      return;
+    }
+
+    try {
+      var size = parseInt(els.size.value, 10) || 256;
+      var qr = buildQR(payload);
+      paintPreview(qr, size);
+      setStatus(els.status, '✓ Ready — scan to test');
+      scheduleHistory();
+    } catch (e) {
+      clearPreview();
+      setStatus(els.status, '⚠️ ' + friendlyErr(e), true);
+    }
+  }
+
+  function emptyHint(tab) {
+    if (tab === 'wifi') return 'Enter a network name above';
+    if (tab === 'vcard') return 'Enter a name above';
+    if (tab === 'email') return 'Enter an email address above';
+    return '';
+  }
+
+  function updateCount() {
+    if (els.count) els.count.textContent = els.text.value.length + ' characters';
+    if (els.bulkcount) {
+      var n = els.bulktext.value.split('\n').filter(function (l) { return l.trim(); }).length;
+      els.bulkcount.textContent = n + (n === 1 ? ' line' : ' lines');
+    }
+  }
+
+  function scheduleRender() {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(render, 180);
+  }
+
+  /* ---------- bulk ---------- */
+  async function renderBulk() {
+    if (busy) return;
+    var lines = els.bulktext.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    updateCount();
+    els.grid.innerHTML = '';
+    bulkItems = [];
+
+    if (!lines.length) {
+      setStatus(els.bulkstatus, 'Paste some lines on the left to generate codes');
+      return;
+    }
+
+    var uniq = [];
+    var seen = {};
+    lines.forEach(function (l) { if (!seen[l]) { seen[l] = 1; uniq.push(l); } });
+    if (uniq.length > MAX_BULK) {
+      setStatus(els.bulkstatus, '⚠️ Showing first ' + MAX_BULK + ' of ' + uniq.length + ' lines', true);
+      uniq = uniq.slice(0, MAX_BULK);
+    }
+
+    busy = true;
+    try {
+      var size = parseInt(els.size.value, 10) || 256;
+      for (var i = 0; i < uniq.length; i++) {
+        setStatus(els.bulkstatus, 'Generating ' + (i + 1) + ' / ' + uniq.length + '…');
+        await tick();
+        var item = { text: uniq[i], png: null };
+        try {
+          var qr = buildQR(uniq[i]);
+          var cv = document.createElement('canvas');
+          var ctx = paintQR(qr, cv, size);
+          drawLogo(ctx, size);
+          item.png = cv.toDataURL('image/png');
+          els.grid.appendChild(makeCard(cv, uniq[i], bulkItems.length));
+        } catch (err) {
+          item.error = friendlyErr(err);
+          els.grid.appendChild(makeCard(null, uniq[i] + ' — ' + item.error, -1));
+        }
+        bulkItems.push(item);
+      }
+      var ok = bulkItems.filter(function (b) { return b.png; }).length;
+      setStatus(els.bulkstatus, '✓ ' + ok + ' of ' + bulkItems.length + ' codes ready');
+    } finally {
+      busy = false;
+    }
+  }
+
+  function makeCard(canvas, label, index) {
+    var card = document.createElement('div');
+    card.className = 'bulk-card';
+    if (canvas) {
+      canvas.removeAttribute('style');
+      card.appendChild(canvas);
+    } else {
+      var ph = document.createElement('div');
+      ph.style.cssText = 'aspect-ratio:1;background:#e2e8f0;border-radius:6px';
+      card.appendChild(ph);
+    }
+    var lab = document.createElement('div');
+    lab.className = 'bulk-label';
+    lab.title = label;
+    lab.textContent = label;
+    card.appendChild(lab);
+
+    if (index >= 0) {
+      var btn = document.createElement('button');
+      btn.className = 'mini';
+      btn.type = 'button';
+      btn.textContent = '⬇ PNG';
+      btn.addEventListener('click', function () {
+        var it = bulkItems[index];
+        if (it && it.png) { triggerDownload(it.png, 'qr-' + (index + 1) + '.png'); setStatus(els.bulkstatus, '✓ Downloaded qr-' + (index + 1) + '.png'); }
+      });
+      card.appendChild(btn);
+    }
+    return card;
+  }
+
+  async function downloadAll() {
+    var ready = bulkItems.filter(function (b) { return b.png; });
+    if (!ready.length) { setStatus(els.bulkstatus, '⚠️ Generate the codes first', true); return; }
+    setStatus(els.bulkstatus, 'Downloading ' + ready.length + ' files…');
+    for (var i = 0; i < bulkItems.length; i++) {
+      if (!bulkItems[i].png) continue;
+      triggerDownload(bulkItems[i].png, 'qr-' + (i + 1) + '.png');
+      await sleep(320);
+    }
+    setStatus(els.bulkstatus, '✓ Downloaded ' + ready.length + ' files');
+  }
+
+  /* ---------- exports ---------- */
+  function getPNG() {
+    if (els.preview.style.display === 'none' || !els.preview.width) return null;
+    try { return els.preview.toDataURL('image/png'); }
+    catch (e) { return null; }
+  }
+
+  function triggerDownload(dataUrl, filename) {
+    var a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function buildSVG() {
+    var qr = lastQr;
+    if (!qr || typeof qr.getModuleCount !== 'function') throw new Error('SVG export unavailable');
+    var n = qr.getModuleCount();
+    var m = 4; // quiet zone (modules)
+    var total = n + m * 2;
+    var light = els.light.value;
+    var dark = els.dark.value;
+    var r, c, run, out = '';
+
+    for (r = 0; r < n; r++) {
+      run = 0;
+      for (c = 0; c <= n; c++) {
+        var isDark = c < n && qr.isDark(r, c);
+        if (isDark) run++;
+        else if (run) {
+          out += '<rect x="' + (c - run + m) + '" y="' + (r + m) + '" width="' + run + '" height="1"/>';
+          run = 0;
+        }
+      }
+    }
+
+    var overlay = '';
+    if (logoData) {
+      var box = total * 0.22;
+      var pad = total * 0.02;
+      var x = (total - box) / 2, y = (total - box) / 2;
+      overlay = '<rect x="' + (x - pad) + '" y="' + (y - pad) + '" width="' + (box + pad * 2) +
+        '" height="' + (box + pad * 2) + '" rx="' + (total * 0.035) + '" fill="' + light + '"/>' +
+        '<image href="' + logoData + '" xlink:href="' + logoData + '" x="' + x + '" y="' + y +
+        '" width="' + box + '" height="' + box + '" preserveAspectRatio="xMidYMid meet"/>';
+    }
+
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ' +
+      'viewBox="0 0 ' + total + ' ' + total + '" shape-rendering="crispEdges">' +
+      '<rect width="' + total + '" height="' + total + '" fill="' + light + '"/>' +
+      '<g fill="' + dark + '">' + out + '</g>' + overlay + '</svg>';
+  }
+
+  function downloadSVG() {
+    try {
+      var svg = buildSVG();
+      var blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      triggerDownload(url, 'qr-code.svg');
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      setStatus(els.status, '✓ Downloaded qr-code.svg');
+    } catch (e) {
+      setStatus(els.status, '⚠️ ' + friendlyErr(e), true);
+    }
+  }
+
+  async function copyImage() {
+    var png = getPNG();
+    if (!png) { setStatus(els.status, '⚠️ Generate a QR code first', true); return; }
+    try {
+      var blob = await (await fetch(png)).blob();
+      if (!window.ClipboardItem) throw new Error('no clipboard');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      setStatus(els.status, '✓ Image copied to clipboard!');
+    } catch (e) {
+      try {
+        await navigator.clipboard.writeText(buildPayload(currentTab));
+        setStatus(els.status, '✓ Copied as text instead');
+      } catch (e2) {
+        setStatus(els.status, '⚠️ Clipboard blocked — use Download instead', true);
+      }
+    }
+  }
+
+  /* ---------- history ---------- */
+  function snapshot() {
+    var f = {};
+    ['text', 'ssid', 'wpass', 'enc', 'whidden', 'vname', 'vorg', 'vphone', 'vemail', 'vweb', 'vtitle',
+      'eto', 'esub', 'ebody', 'bulktext', 'size', 'ecc', 'dark', 'light'].forEach(function (id) {
+        var el = $(id);
+        if (!el) return;
+        f[id] = (el.type === 'checkbox') ? !!el.checked : el.value;
+      });
+    return { v: 1, tab: currentTab, f: f };
+  }
+
+  function applySnapshot(snap) {
+    if (!snap || !snap.f) return false;
+    Object.keys(snap.f).forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      try {
+        if (el.type === 'checkbox') el.checked = !!snap.f[id];
+        else el.value = snap.f[id];
+      } catch (e) { /* ignore bad stored value */ }
+    });
+    if (snap.tab) setTab(snap.tab, false);
+    return true;
+  }
+
+  function scheduleHistory() {
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(saveHistory, 1200);
+  }
+
+  function saveHistory() {
+    if (currentTab === 'bulk') return;
+    var payload = buildPayload(currentTab);
+    if (!payload.trim()) return;
+
+    var list = safeGet(HISTORY_KEY, []);
+    if (!Array.isArray(list)) list = [];
+    var entry = { tab: currentTab, snap: snapshot(), label: truncate(payload.replace(/\s+/g, ' '), 34), ts: Date.now() };
+
+    // dedupe by label+tab, newest first, max 6
+    list = list.filter(function (x) { return !(x && x.label === entry.label && x.tab === entry.tab); });
+    list.unshift(entry);
+    list = list.slice(0, 6);
+    safeSet(HISTORY_KEY, list);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    var list = safeGet(HISTORY_KEY, []);
+    els.recent.innerHTML = '';
+    if (!Array.isArray(list)) return;
+    list.forEach(function (item) {
+      if (!item || !item.snap) return;
+      var b = document.createElement('button');
+      b.className = 'chip';
+      b.type = 'button';
+      b.title = 'Restore: ' + item.label;
+      b.textContent = item.label;
+      b.addEventListener('click', function () {
+        applySnapshot(item.snap);
+        render();
+        setStatus(els.status, '✓ Restored');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      els.recent.appendChild(b);
+    });
+  }
+
+  /* ---------- share ---------- */
+  async function shareLink() {
+    try {
+      var snap = snapshot();
+      // keep the URL short: only embed the logo if it is tiny
+      if (logoData && logoData.length < 1200) snap.logo = logoData;
+      var hash = '#' + SHARE_KEY + '=' + b64enc(JSON.stringify(snap));
+      var url = location.origin + location.pathname + hash;
+      if (url.length > 8000) throw new Error('Too much content to share as a link');
+      history.replaceState(null, '', hash);
+      try {
+        await navigator.clipboard.writeText(url);
+        setStatus(els.status, '✓ Share link copied — paste it anywhere');
+      } catch (e) {
+        setStatus(els.status, '✓ Link updated in the address bar');
+      }
+    } catch (e) {
+      setStatus(els.status, '⚠️ ' + friendlyErr(e), true);
+    }
+  }
+
+  function readHash() {
+    try {
+      var h = location.hash || '';
+      var marker = SHARE_KEY + '=';
+      var i = h.indexOf(marker);
+      if (i < 0) return false;
+      var snap = JSON.parse(b64dec(h.slice(i + marker.length)));
+      if (!applySnapshot(snap)) return false;
+      if (snap.logo && typeof snap.logo === 'string') {
+        logoData = snap.logo;
+        loadLogoInto(logoData);
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ---------- logo ---------- */
+  function loadLogoInto(dataUrl) {
+    var img = new Image();
+    img.onload = function () {
+      logoImg = img;
+      els.logothumb.src = dataUrl;
+      els.logothumb.style.display = 'block';
+      els.logorem.style.display = 'inline-block';
+      if (els.ecc.value !== 'H') {
+        els.ecc.value = 'H';
+        setStatus(els.status, '✓ Error correction set to High for logo clarity');
+      }
+      render();
+    };
+    img.onerror = function () {
+      logoData = null; logoImg = null;
+      setStatus(els.status, '⚠️ That image could not be read', true);
+    };
+    img.src = dataUrl;
+  }
+
+  function onLogoFile(file) {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { setStatus(els.status, '⚠️ Please choose an image file', true); return; }
+    if (file.size > 2 * 1024 * 1024) { setStatus(els.status, '⚠️ Image must be under 2 MB', true); return; }
+    var fr = new FileReader();
+    fr.onload = function () { logoData = String(fr.result); loadLogoInto(logoData); };
+    fr.onerror = function () { setStatus(els.status, '⚠️ Could not read that file', true); };
+    fr.readAsDataURL(file);
+  }
+
+  function removeLogo() {
+    logoData = null; logoImg = null;
+    els.logothumb.removeAttribute('src');
+    els.logothumb.style.display = 'none';
+    els.logorem.style.display = 'none';
+    els.logo.value = '';
+    render();
+  }
+
+  /* ---------- tabs ---------- */
+  function setTab(tab, doRender) {
+    var known = ['link', 'wifi', 'vcard', 'email', 'bulk'];
+    if (known.indexOf(tab) < 0) tab = 'link';
+    currentTab = tab;
+
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+    });
+    document.querySelectorAll('.panel').forEach(function (p) {
+      p.classList.toggle('active', p.dataset.panel === tab);
+    });
+
+    var isBulk = tab === 'bulk';
+    document.body.classList.toggle('bulk-mode', isBulk);
+    els.singleview.style.display = isBulk ? 'none' : 'flex';
+    els.bulkview.style.display = isBulk ? 'block' : 'none';
+
+    if (doRender !== false) {
+      if (isBulk) renderBulk(); else render();
+    }
+  }
+
+  function clearAll() {
+    if (currentTab === 'bulk') {
+      els.bulktext.value = '';
+      els.grid.innerHTML = '';
+      bulkItems = [];
+      updateCount();
+      setStatus(els.bulkstatus, '');
+      return;
+    }
+    var panel = document.querySelector('.panel[data-panel="' + currentTab + '"]');
+    if (panel) {
+      panel.querySelectorAll('textarea, input[type=text], input[type=password], input[type=email], input[type=tel], input[type=url]').forEach(function (el) { el.value = ''; });
+    }
+    clearPreview();
+    setStatus(els.status, '');
+    if (currentTab === 'link') els.count.textContent = '0 characters';
+  }
+
+  /* ---------- wiring ---------- */
+  function wire() {
+    // tabs
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.addEventListener('click', function () { setTab(b.dataset.tab); });
+    });
+
+    // live inputs
+    ['text', 'ssid', 'wpass', 'enc', 'whidden', 'vname', 'vorg', 'vphone', 'vemail', 'vweb', 'vtitle',
+      'eto', 'esub', 'ebody'].forEach(function (id) {
+        var el = $(id);
+        if (!el) return;
+        el.addEventListener('input', scheduleRender);
+        el.addEventListener('change', scheduleRender);
+      });
+
+    els.bulktext.addEventListener('input', function () { updateCount(); scheduleRender(); });
+    [els.size, els.ecc, els.dark, els.light].forEach(function (el) {
+      el.addEventListener('input', scheduleRender);
+      el.addEventListener('change', scheduleRender);
+    });
+
+    // colour presets
+    document.querySelectorAll('[data-pair]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var p = b.dataset.pair.split('|');
+        els.dark.value = p[0];
+        els.light.value = p[1];
+        render();
+      });
+    });
+
+    // link samples
+    document.querySelectorAll('[data-sample]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        els.text.value = b.dataset.sample;
+        render();
+      });
+    });
+
+    // logo
+    els.logobtn.addEventListener('click', function () { els.logo.click(); });
+    els.logo.addEventListener('change', function () { onLogoFile(els.logo.files && els.logo.files[0]); });
+    els.logorem.addEventListener('click', removeLogo);
+
+    // actions
+    $('download').addEventListener('click', function () {
+      var png = getPNG();
+      if (!png) { setStatus(els.status, '⚠️ Generate a QR code first', true); return; }
+      triggerDownload(png, 'qr-code.png');
+      setStatus(els.status, '✓ Downloaded qr-code.png');
+    });
+    $('svgbtn').addEventListener('click', downloadSVG);
+    $('copy').addEventListener('click', copyImage);
+    $('share').addEventListener('click', shareLink);
+    $('clear').addEventListener('click', clearAll);
+    $('dlall').addEventListener('click', downloadAll);
+    $('bulkclear').addEventListener('click', clearAll);
+
+    // drag & drop an image onto the preview adds it as the logo
+    ['dragover', 'drop'].forEach(function (evt) {
+      els.box.addEventListener(evt, function (e) {
+        e.preventDefault();
+        if (evt === 'drop' && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          onLogoFile(e.dataTransfer.files[0]);
+        }
+      });
+    });
+
+    window.addEventListener('hashchange', function () {
+      if (!readHash()) return;
+      render();
+      // render() sets a generic status — restore the more useful note
+      setStatus(els.status, '✓ Shared settings loaded');
+    });
+  }
+
+  /* ---------- boot ---------- */
+  function boot() {
+    if (typeof qrcode === 'undefined') {
+      setStatus(els.status, '⚠️ QR library failed to load (qrcode.js missing)', true);
+      return;
+    }
+    // Proper UTF-8 encoding so accents, CJK and emoji never overflow
+    if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) {
+      qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+    }
+    wire();
+    updateCount();
+    var restored = readHash();
+    renderHistory();
+    setTab(restored ? currentTab : 'link', false);
+    render();
+    if (restored) setStatus(els.status, '✓ Shared settings loaded');
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+// ==APP-END==
+</script>
+</body>
+</html>
