@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const SITE = 'https://lively-griffin-83a14f.netlify.app';
+const SITE = 'https://remarkable-haupia-c7ea70.netlify.app';
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 async function launch(port, profile) {

@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const SITE = 'https://lively-griffin-83a14f.netlify.app';
+const SITE = 'https://remarkable-haupia-c7ea70.netlify.app';
 const PORT = 9411;
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const chrome = spawn(CHROME, [`--remote-debugging-port=${PORT}`, '--headless=new',
@@ -157,8 +157,9 @@ const hash = await ev('location.hash');
 let shareOk = false;
 if (hash && hash.length > 40) {
   shareOk = hash.startsWith('#qr-gen-v1=');
-  // full round-trip: reload with the hash
-  await send('Page.navigate', { url: SITE + '/' + hash });
+  // full round-trip: cold-load with the hash. A's URL already IS the hash URL
+  // after the share click, so add a unique query param to force a real reload.
+  await send('Page.navigate', { url: SITE + '/?restore=' + Date.now() + hash });
   await sleep(3500);
   const rt = await ev(`(() => ({ v: document.getElementById('text').value,
     s: document.getElementById('status').textContent }))()`);
@@ -176,7 +177,7 @@ check('No console/page errors on live site', realErrs.length === 0,
 // --- screenshot of live site ---
 try {
   await ev(`(() => { document.querySelector('[data-tab="link"]').click();
-    const t=document.getElementById('text'); t.value='https://lively-griffin-83a14f.netlify.app';
+    const t=document.getElementById('text'); t.value='https://remarkable-haupia-c7ea70.netlify.app';
     t.dispatchEvent(new Event('input',{bubbles:true})); return true; })()`);
   await sleep(900);
   const shot = await send('Page.captureScreenshot', { format: 'png' });
